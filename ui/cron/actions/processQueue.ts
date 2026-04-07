@@ -3,7 +3,50 @@ import prisma from '../prisma';
 import { Job, Queue } from '@prisma/client';
 import startJob from './startJob';
 
+const REMOTE_GPU_MODE = process.env.REMOTE_GPU_MODE === 'true';
+const API2_ENDPOINT = process.env.API2_ENDPOINT || 'http://localhost:5087';
+
+// In remote mode, poll api2 for status updates on running jobs and sync to local SQLite
+async function syncRemoteJobStatus() {
+  const activeJobs: Job[] = await prisma.job.findMany({
+    where: { status: { in: ['running', 'queued'] } },
+  });
+
+  for (const job of activeJobs) {
+    if (job.status !== 'running') continue;
+
+    try {
+      const response = await fetch(
+        `${API2_ENDPOINT}/api/AiToolkitProxy/status?jobId=${job.id}`
+      );
+      if (!response.ok) continue;
+
+      const remote = await response.json();
+      const updateData: any = {};
+
+      if (remote.status) updateData.status = remote.status;
+      if (remote.step !== undefined) updateData.step = remote.step;
+      if (remote.info) updateData.info = remote.info;
+      if (remote.speedString) updateData.speed_string = remote.speedString;
+
+      if (Object.keys(updateData).length > 0) {
+        await prisma.job.update({
+          where: { id: job.id },
+          data: updateData,
+        });
+      }
+    } catch (e) {
+      // api2 unreachable, skip this cycle
+    }
+  }
+}
+
 export default async function processQueue() {
+  // In remote mode, sync status from api2 for running jobs
+  if (REMOTE_GPU_MODE) {
+    await syncRemoteJobStatus();
+  }
+
   const queues: Queue[] = await prisma.queue.findMany({
     orderBy: {
       id: 'asc',

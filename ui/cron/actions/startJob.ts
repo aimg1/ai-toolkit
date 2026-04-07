@@ -6,6 +6,43 @@ import fs from 'fs';
 import { TOOLKIT_ROOT, getTrainingFolder, getHFToken } from '../paths';
 const isWindows = process.platform === 'win32';
 
+const REMOTE_GPU_MODE = process.env.REMOTE_GPU_MODE === 'true';
+const API2_ENDPOINT = process.env.API2_ENDPOINT || 'http://localhost:5087';
+
+const startRemoteJob = async (job: Job) => {
+  // Dispatch job to remote GPU via api2 backend
+  const jobConfig = JSON.parse(job.job_config);
+  try {
+    const response = await fetch(`${API2_ENDPOINT}/api/AiToolkitProxy/dispatch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jobId: job.id,
+        jobName: job.name,
+        gpuIds: job.gpu_ids,
+        jobConfig: jobConfig,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`api2 dispatch failed (${response.status}): ${errorText}`);
+    }
+
+    const result = await response.json();
+    console.log(`[REMOTE] Job ${job.id} dispatched to GPU worker: ${result.gpuIp || 'pending'}`);
+  } catch (error: any) {
+    console.error(`[REMOTE] Error dispatching job ${job.id}:`, error);
+    await prisma.job.update({
+      where: { id: job.id },
+      data: {
+        status: 'error',
+        info: `Remote dispatch failed: ${error?.message || 'Unknown error'}`,
+      },
+    });
+  }
+};
+
 const startAndWatchJob = (job: Job) => {
   // starts and watches the job asynchronously
   return new Promise<void>(async (resolve, reject) => {
@@ -182,5 +219,9 @@ export default async function startJob(jobID: string) {
     },
   });
   // start and watch the job asynchronously so the cron can continue
-  startAndWatchJob(job);
+  if (REMOTE_GPU_MODE) {
+    startRemoteJob(job);
+  } else {
+    startAndWatchJob(job);
+  }
 }
