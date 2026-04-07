@@ -5,6 +5,8 @@ import { createRequire } from 'module';
 import os from 'os';
 
 const execAsync = promisify(exec);
+const REMOTE_GPU_MODE = process.env.REMOTE_GPU_MODE === 'true';
+const API2_ENDPOINT = process.env.API2_ENDPOINT || 'http://localhost:5087';
 
 interface MacGpuResult {
   name: string;
@@ -95,6 +97,29 @@ async function getMacGpuInfo(): Promise<MacGpuResult | null> {
 
 export async function GET() {
   try {
+    // Remote mode: query api2 for GPU pool status
+    if (REMOTE_GPU_MODE) {
+      try {
+        const response = await fetch(`${API2_ENDPOINT}/api/AiToolkitProxy/gpus`);
+        if (response.ok) {
+          const data = await response.json();
+          return NextResponse.json(data);
+        }
+      } catch (e) {
+        console.error('[REMOTE] Error fetching GPU pool:', e);
+      }
+      // Fallback: return empty GPU list so UI still works
+      return NextResponse.json({
+        hasNvidiaSmi: false,
+        isMac: false,
+        gpus: [{ index: 0, name: 'Remote GPU Pool', driverVersion: 'remote',
+          temperature: 0, utilization: { gpu: 0, memory: 0 },
+          memory: { total: 32768, free: 32768, used: 0 },
+          power: { draw: 0, limit: 0 }, clocks: { graphics: 0, memory: 0 },
+          fan: { speed: 0 } }],
+      });
+    }
+
     // Get platform
     const platform = os.platform();
     const isWindows = platform === 'win32';
