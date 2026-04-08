@@ -118,7 +118,10 @@ class UILogger:
         if parent and not os.path.exists(parent):
             os.makedirs(parent, exist_ok=True)
 
+        # Set umask so loss_log.db is world-readable (needed for NFS cross-client access)
+        old_umask = os.umask(0o000)
         self._con = sqlite3.connect(self.log_file, timeout=30.0, isolation_level=None)
+        os.umask(old_umask)
         # Use DELETE journal mode instead of WAL for NFS compatibility
         # (WAL uses -shm/-wal files that require mmap/locking, broken over NFS)
         self._con.execute("PRAGMA journal_mode=DELETE;")
