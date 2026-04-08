@@ -119,7 +119,9 @@ class UILogger:
             os.makedirs(parent, exist_ok=True)
 
         self._con = sqlite3.connect(self.log_file, timeout=30.0, isolation_level=None)
-        self._con.execute("PRAGMA journal_mode=WAL;")
+        # Use DELETE journal mode instead of WAL for NFS compatibility
+        # (WAL uses -shm/-wal files that require mmap/locking, broken over NFS)
+        self._con.execute("PRAGMA journal_mode=DELETE;")
         self._con.execute("PRAGMA synchronous=NORMAL;")
         self._con.execute("PRAGMA temp_store=MEMORY;")
         self._con.execute("PRAGMA foreign_keys=ON;")
