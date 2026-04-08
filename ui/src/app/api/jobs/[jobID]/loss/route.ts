@@ -11,8 +11,10 @@ export const runtime = 'nodejs';
 const prisma = new PrismaClient();
 
 function openDb(filename: string) {
-  const db = new sqlite3.Database(filename);
-  db.configure('busyTimeout', 30_000);
+  // Open read-only with nolock to avoid NFS WAL locking issues
+  // (loss_log.db is written by Docker on GPU worker, read by UI in LXC container, both via NFS)
+  const db = new sqlite3.Database(`file:${filename}?mode=ro&nolock=1`, sqlite3.OPEN_READONLY | sqlite3.OPEN_URI);
+  db.configure('busyTimeout', 5_000);
   return db;
 }
 
