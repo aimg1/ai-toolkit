@@ -48,6 +48,16 @@ export async function GET(request: NextRequest, { params }: { params: { jobID: s
     return NextResponse.json({ keys: [], key: 'loss', points: [] });
   }
 
+  // Force the NFS client to refresh its attribute+data cache for this inode.
+  // Without this, the container can serve a stale SQLite snapshot for a long
+  // time when the GPU worker is actively writing the DB over NFS (/mnt/nfs_training
+  // caches attrs for up to acregmax). A bare open()+close() invalidates the
+  // cached entry and makes the subsequent sqlite read see current data.
+  try {
+    const fd = fs.openSync(logPath, fs.constants.O_RDONLY);
+    fs.closeSync(fd);
+  } catch {}
+
   const url = new URL(request.url);
   const key = url.searchParams.get('key') ?? 'loss';
   const limit = Math.min(Number(url.searchParams.get('limit') ?? 2000), 20000);
