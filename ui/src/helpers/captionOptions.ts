@@ -60,7 +60,8 @@ export const captionerTypes: CaptionOption[] = [
             { value: 'Qwen/Qwen3-VL-2B-Instruct', label: 'Qwen/Qwen3-VL-2B-Instruct' },
             { value: 'Qwen/Qwen3-VL-4B-Instruct', label: 'Qwen/Qwen3-VL-4B-Instruct' },
             { value: 'Qwen/Qwen3-VL-8B-Instruct', label: 'Qwen/Qwen3-VL-8B-Instruct' },
-            { value: 'Qwen/Qwen3-VL-30B-A3B-Instruct', label: 'Qwen/Qwen3-VL-30B-A3B-Instruct' },
+            // 30B-A3B removed: bf16 load peaks at ~60 GiB system RAM which exceeds
+            // our 46 GiB GPU hosts and OOM-kills the captioner mid-load.
         ],
         additionalSections: [
             'caption.caption_prompt',
