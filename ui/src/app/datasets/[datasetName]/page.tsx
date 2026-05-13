@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, use, useMemo } from 'react';
+import { useEffect, useState, use, useMemo, useRef } from 'react';
 import { LuImageOff, LuLoader, LuBan } from 'react-icons/lu';
 import { FaChevronLeft } from 'react-icons/fa';
 import DatasetImageCard from '@/components/DatasetImageCard';
@@ -45,6 +45,17 @@ export default function DatasetPage({ params }: { params: { datasetName: string 
       refreshImageList(datasetName);
     }
   }, [datasetName]);
+
+  // Refresh the image/caption list when an auto-caption job finishes (transitions
+  // from running → not-running). Without this the page sits on stale data and the
+  // user has to manually F5 to see the .txt files that were just written.
+  const wasAutoCaptioning = useRef(false);
+  useEffect(() => {
+    if (wasAutoCaptioning.current && !isAutoCaptioning && datasetName) {
+      refreshImageList(datasetName);
+    }
+    wasAutoCaptioning.current = isAutoCaptioning;
+  }, [isAutoCaptioning, datasetName]);
 
   const PageInfoContent = useMemo(() => {
     let icon = null;
