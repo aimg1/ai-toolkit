@@ -52,9 +52,10 @@ export const captionerTypes: CaptionOption[] = [
             'config.process[0].caption.model_name_or_path': ['Qwen/Qwen3-VL-8B-Instruct', defaultNameOrPath],
             'config.process[0].caption.extensions': [extensionsImage, defaultExtensions],
             'config.process[0].caption.caption_prompt': [defaultImageCaptionPrompt, undefined],
-            'config.process[0].caption.max_res': [512, undefined],
-            'config.process[0].caption.max_new_tokens': [128, undefined],
-
+            'config.process[0].caption.max_res': [1024, undefined],
+            'config.process[0].caption.max_new_tokens': [256, undefined],
+            'config.process[0].caption.quantize': [false, undefined],
+            'config.process[0].caption.low_vram': [false, undefined],
         },
         name_or_path_options: [
             { value: 'Qwen/Qwen3-VL-2B-Instruct', label: 'Qwen/Qwen3-VL-2B-Instruct' },

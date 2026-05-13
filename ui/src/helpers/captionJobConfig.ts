@@ -14,15 +14,17 @@ export const defaultCaptionJobConfig: CaptionJobConfig = {
         caption: {
           model_name_or_path: 'Qwen/Qwen3-VL-8B-Instruct',
           dtype: 'bf16',
-          quantize: true,
+          // 8B bf16 fits comfortably on 32 GB Blackwell (~16 GB weights + pipeline)
+          // and avoids the fp8-quantization accuracy loss on detailed captions.
+          quantize: false,
           qtype: 'float8',
-          low_vram: true,
+          low_vram: false,
           extensions: ['jpg', 'jpeg', 'png', 'bmp', 'webp'],
           path_to_caption: '',
           recaption: false,
           caption_prompt: 'Caption this image as if you were going to try to generate it with an image generator. Be thurough and describe everything in the image. Be decisive by stating things as they are. Do not say things like "It appears that" Or "possibly". Start out with things like "A person on the beach" or "A black dragon". No preamble. Just get to the point.',
-          max_res: 512,
-          max_new_tokens: 128,
+          max_res: 1024,
+          max_new_tokens: 256,
         },
       },
     ],
